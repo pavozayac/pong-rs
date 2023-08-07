@@ -8,7 +8,7 @@ extern crate rust_embed;
 extern crate rusttype;
 
 use glutin_window::GlutinWindow as Window;
-use graphics::glyph_cache;
+
 use opengl_graphics::{GlGraphics, GlyphCache, OpenGL, TextureSettings};
 use parry2d_f64::bounding_volume::BoundingVolume;
 use parry2d_f64::math::Vector;
@@ -18,13 +18,7 @@ use piston::event_loop::{EventSettings, Events};
 use piston::input::{RenderArgs, RenderEvent, UpdateArgs, UpdateEvent};
 use piston::window::WindowSettings;
 use piston::{Button, Key, PressEvent, ReleaseEvent};
-use piston_window::PistonWindow;
-use rust_embed::RustEmbed;
 use rusttype::Font;
-
-#[derive(RustEmbed)]
-#[folder = "assets/"]
-struct Assets;
 
 const PADDLE_SPEED: f64 = 300.0;
 const PADDLE_WIDTH: f64 = 5.0;
