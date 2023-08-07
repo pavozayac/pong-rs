@@ -8,18 +8,21 @@ use glutin_window::GlutinWindow as Window;
 use opengl_graphics::{GlGraphics, OpenGL};
 use parry2d_f64::bounding_volume::BoundingVolume;
 use parry2d_f64::math::Vector;
-use parry2d_f64::na::{Isometry2, Matrix2, Vector2};
-use parry2d_f64::shape::{Ball, Cuboid};
+use parry2d_f64::na::{Isometry2, Matrix2, Point2, Vector2};
+use parry2d_f64::shape::{Ball, Cuboid, Segment};
 use piston::event_loop::{EventSettings, Events};
 use piston::input::{RenderArgs, RenderEvent, UpdateArgs, UpdateEvent};
 use piston::window::WindowSettings;
-use piston::{Button, Event, Input, Key, PressEvent, ReleaseEvent};
+use piston::{Button, Key, PressEvent, ReleaseEvent};
+
+struct Assets;
 
 const PADDLE_SPEED: f64 = 300.0;
 const PADDLE_WIDTH: f64 = 5.0;
 const PADDLE_HEIGHT: f64 = 100.0;
-const PONG_RADIUS: f64 = 10.0;
+const PONG_RADIUS: f64 = 5.0;
 const PADDING: f64 = 20.0;
+const PONG_SPEED: f64 = 200.0;
 pub struct Pong {
     pos: Vector2<f64>,
     vel: Vector2<f64>,
@@ -33,17 +36,39 @@ impl Pong {
 
 pub struct App {
     gl: GlGraphics, // OpenGL drawing backend.
+    left_score: u64,
+    right_score: u64,
     left_y: f64,
     right_y: f64,
     left_key: Option<Key>,
     right_key: Option<Key>,
     pong: Pong,
     window_size: [f64; 2],
+    border_left: Segment,
+    border_right: Segment,
+    border_top: Segment,
+    border_bottom: Segment,
 }
 
 impl App {
     fn render(&mut self, args: &RenderArgs) {
         use graphics::*;
+
+        self.border_top =
+            Segment::new(Point2::new(0.0, 0.0), Point2::new(self.window_size[0], 0.0));
+
+        self.border_bottom = Segment::new(
+            Point2::new(0.0, self.window_size[1] as f64),
+            Point2::new(self.window_size[0], self.window_size[1]),
+        );
+
+        self.border_left =
+            Segment::new(Point2::new(0.0, 0.0), Point2::new(0.0, self.window_size[1]));
+
+        self.border_right = Segment::new(
+            Point2::new(self.window_size[0], 0.0),
+            Point2::new(self.window_size[0], self.window_size[1]),
+        );
 
         self.window_size = args.window_size;
 
@@ -116,8 +141,8 @@ impl App {
 
         if paddle_box_left.intersects(&pong_box) {
             match self.left_key {
-                Some(Key::W) => self.pong.vel -= Vector2::new(0.0, 30.0),
-                Some(Key::S) => self.pong.vel += Vector2::new(0.0, 30.0),
+                Some(Key::W) => self.pong.vel = Vector2::new(self.pong.vel.x, -PONG_SPEED),
+                Some(Key::S) => self.pong.vel = Vector2::new(self.pong.vel.x, PONG_SPEED),
                 Some(_) => {}
                 None => {}
             }
@@ -125,12 +150,30 @@ impl App {
 
         if paddle_box_right.intersects(&pong_box) {
             match self.right_key {
-                Some(Key::Up) => self.pong.vel -= Vector2::new(0.0, 30.0),
-                Some(Key::Down) => self.pong.vel += Vector2::new(0.0, 30.0),
+                Some(Key::Up) => self.pong.vel = Vector2::new(self.pong.vel.x, -PONG_SPEED),
+                Some(Key::Down) => self.pong.vel = Vector2::new(self.pong.vel.x, PONG_SPEED),
                 Some(_) => {}
                 None => {}
             }
         }
+
+        if pong_box.intersects(&self.border_bottom.local_aabb())
+            || pong_box.intersects(&self.border_top.local_aabb())
+        {
+            self.pong.vel = Matrix2::new(1.0, 0.0, 0.0, -1.0) * self.pong.vel;
+        }
+
+        if pong_box.intersects(&self.border_left.local_aabb()) {
+            self.pong.pos = Vector2::new(self.window_size[0] / 2.0, self.window_size[1] / 2.0);
+            self.right_score += 1;
+        }
+
+        if pong_box.intersects(&self.border_right.local_aabb()) {
+            self.pong.pos = Vector2::new(self.window_size[0] / 2.0, self.window_size[1] / 2.0);
+            self.left_score += 1;
+        }
+
+        println!("{} {}", self.left_score, self.right_score);
     }
 }
 
@@ -145,18 +188,46 @@ fn main() {
 
     let mut app = App {
         gl: GlGraphics::new(opengl),
+        left_score: 0,
+        right_score: 0,
         left_y: 200.0,
         right_y: 200.0,
         left_key: None,
         right_key: None,
         pong: Pong {
-            pos: [200.0, 200.0].into(),
-            vel: [100.0, 3.0].into(),
+            pos: [
+                window.window.inner_size().width as f64 / 2.0,
+                window.window.inner_size().height as f64 / 2.0,
+            ]
+            .into(),
+            vel: [PONG_SPEED, 0.0].into(),
         },
         window_size: [
             window.window.inner_size().width as f64,
             window.window.inner_size().height as f64,
         ],
+        border_top: Segment::new(
+            Point2::new(0.0, 0.0),
+            Point2::new(window.window.inner_size().width as f64, 0.0),
+        ),
+        border_bottom: Segment::new(
+            Point2::new(0.0, window.window.inner_size().height as f64),
+            Point2::new(
+                window.window.inner_size().width as f64,
+                window.window.inner_size().height as f64,
+            ),
+        ),
+        border_left: Segment::new(
+            Point2::new(0.0, 0.0),
+            Point2::new(0.0, window.window.inner_size().height as f64),
+        ),
+        border_right: Segment::new(
+            Point2::new(window.window.inner_size().width as f64, 0.0),
+            Point2::new(
+                window.window.inner_size().width as f64,
+                window.window.inner_size().height as f64,
+            ),
+        ),
     };
 
     let mut events = Events::new(EventSettings::new());
