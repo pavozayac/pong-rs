@@ -3,9 +3,13 @@ extern crate graphics;
 extern crate opengl_graphics;
 extern crate parry2d_f64;
 extern crate piston;
+extern crate piston_window;
+extern crate rust_embed;
+extern crate rusttype;
 
 use glutin_window::GlutinWindow as Window;
-use opengl_graphics::{GlGraphics, OpenGL};
+use graphics::glyph_cache;
+use opengl_graphics::{GlGraphics, GlyphCache, OpenGL, TextureSettings};
 use parry2d_f64::bounding_volume::BoundingVolume;
 use parry2d_f64::math::Vector;
 use parry2d_f64::na::{Isometry2, Matrix2, Point2, Vector2};
@@ -14,7 +18,12 @@ use piston::event_loop::{EventSettings, Events};
 use piston::input::{RenderArgs, RenderEvent, UpdateArgs, UpdateEvent};
 use piston::window::WindowSettings;
 use piston::{Button, Key, PressEvent, ReleaseEvent};
+use piston_window::PistonWindow;
+use rust_embed::RustEmbed;
+use rusttype::Font;
 
+#[derive(RustEmbed)]
+#[folder = "assets/"]
 struct Assets;
 
 const PADDLE_SPEED: f64 = 300.0;
@@ -51,7 +60,7 @@ pub struct App {
 }
 
 impl App {
-    fn render(&mut self, args: &RenderArgs) {
+    fn render(&mut self, args: &RenderArgs, gc: &mut GlyphCache) {
         use graphics::*;
 
         self.border_top =
@@ -83,6 +92,7 @@ impl App {
         let (px, py) = (self.pong.pos[0], self.pong.pos[1]);
         let (x1_left, y1_left) = (PADDING, self.left_y);
         let (x1_right, y1_right) = (args.window_size[0] - PADDING - PADDLE_WIDTH, self.right_y);
+        let (lscore, rscore) = (self.left_score, self.right_score);
 
         self.gl.draw(args.viewport(), |c, gl| {
             clear(BLACK, gl);
@@ -91,9 +101,34 @@ impl App {
             let transform_right = c.transform.trans(x1_right, y1_right);
             let transform_pong = c.transform.trans(px - PONG_RADIUS, py - PONG_RADIUS);
 
+            let left_text_tranform = c
+                .transform
+                .trans(args.window_size[0] / 2.0 - 50.0, PADDING * 2.0);
+            let right_text_tranform = c
+                .transform
+                .trans(args.window_size[0] / 2.0 + 50.0, PADDING * 2.0);
+
             rectangle(WHITE, paddle, transform_left, gl);
             rectangle(WHITE, paddle2, transform_right, gl);
             ellipse(WHITE, pong_rect, transform_pong, gl);
+            text::Text::new_color(WHITE, 20)
+                .draw(
+                    &lscore.to_string(),
+                    gc,
+                    &c.draw_state,
+                    left_text_tranform,
+                    gl,
+                )
+                .unwrap();
+            text::Text::new_color(WHITE, 20)
+                .draw(
+                    &rscore.to_string(),
+                    gc,
+                    &c.draw_state,
+                    right_text_tranform,
+                    gl,
+                )
+                .unwrap();
         });
     }
 
@@ -186,6 +221,10 @@ fn main() {
         .build()
         .unwrap();
 
+    let font_data = include_bytes!("../assets/FiraSans-Regular.ttf");
+    let font: Font = Font::try_from_bytes(font_data).unwrap();
+    let mut gc = GlyphCache::from_font(font, (), TextureSettings::new());
+
     let mut app = App {
         gl: GlGraphics::new(opengl),
         left_score: 0,
@@ -256,7 +295,7 @@ fn main() {
         }
 
         if let Some(args) = e.render_args() {
-            app.render(&args);
+            app.render(&args, &mut gc);
         }
 
         if let Some(args) = e.update_args() {

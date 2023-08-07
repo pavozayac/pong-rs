@@ -16,4 +16,6 @@ pistoncore-glutin_window = "0.71.0"
 piston2d-opengl_graphics = "0.82.0"
 parry2d-f64 = "0.13.5"
 rust-embed = "6.8.1"
+piston_window = "0.128.0"
+rusttype = "0.9.3"
 
