@@ -157,7 +157,7 @@ impl App {
             } else {
                 self.pong.pos = Vector2::new(self.window_size[0] / 2.0, self.window_size[1] / 2.0);
                 self.pong.vel = Vector2::new(-150.0, 0.0);
-                self.right_score += 1;
+                self.left_score += 1;
             }
         }
     }
