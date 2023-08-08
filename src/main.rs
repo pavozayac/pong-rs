@@ -10,11 +10,9 @@ extern crate rusttype;
 use glutin_window::GlutinWindow as Window;
 
 use opengl_graphics::{GlGraphics, GlyphCache, OpenGL, TextureSettings};
-use parry2d_f64::bounding_volume::{Aabb, BoundingVolume};
-use parry2d_f64::math::Vector;
-use parry2d_f64::na::{Isometry2, Matrix2, Point2, Vector2};
-use parry2d_f64::query::{Ray, RayCast};
-use parry2d_f64::shape::{Ball, Cuboid, Segment};
+
+use parry2d_f64::na::{Matrix2, Vector2};
+
 use piston::event_loop::{EventSettings, Events};
 use piston::input::{RenderArgs, RenderEvent, UpdateArgs, UpdateEvent};
 use piston::window::WindowSettings;
