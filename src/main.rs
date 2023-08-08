@@ -10,9 +10,10 @@ extern crate rusttype;
 use glutin_window::GlutinWindow as Window;
 
 use opengl_graphics::{GlGraphics, GlyphCache, OpenGL, TextureSettings};
-use parry2d_f64::bounding_volume::BoundingVolume;
+use parry2d_f64::bounding_volume::{Aabb, BoundingVolume};
 use parry2d_f64::math::Vector;
 use parry2d_f64::na::{Isometry2, Matrix2, Point2, Vector2};
+use parry2d_f64::query::{Ray, RayCast};
 use parry2d_f64::shape::{Ball, Cuboid, Segment};
 use piston::event_loop::{EventSettings, Events};
 use piston::input::{RenderArgs, RenderEvent, UpdateArgs, UpdateEvent};
@@ -65,12 +66,17 @@ impl App {
             Point2::new(self.window_size[0], self.window_size[1]),
         );
 
-        self.border_left =
-            Segment::new(Point2::new(0.0, 0.0), Point2::new(0.0, self.window_size[1]));
+        self.border_left = Segment::new(
+            Point2::new(PADDING + PADDLE_WIDTH / 2.0, 0.0),
+            Point2::new(PADDING + PADDLE_WIDTH / 2.0, self.window_size[1]),
+        );
 
         self.border_right = Segment::new(
-            Point2::new(self.window_size[0], 0.0),
-            Point2::new(self.window_size[0], self.window_size[1]),
+            Point2::new(self.window_size[0] - PADDING - PADDLE_WIDTH / 2.0, 0.0),
+            Point2::new(
+                self.window_size[0] - PADDING - PADDLE_WIDTH / 2.0,
+                self.window_size[1],
+            ),
         );
 
         self.window_size = args.window_size;
@@ -147,16 +153,16 @@ impl App {
 
         let paddle: Cuboid = Cuboid::new(Vector::new(PADDLE_WIDTH / 2.0, PADDLE_HEIGHT / 2.0));
 
-        let pong_box = pong_ball.aabb(&Isometry2::new(self.pong.pos, 0.0));
+        let pong_box: Aabb = pong_ball.aabb(&Isometry2::new(self.pong.pos, 0.0));
 
-        let paddle_box_left = paddle.aabb(&Isometry2::new(
+        let paddle_box_left: Aabb = paddle.aabb(&Isometry2::new(
             Vector2::new(
-                PADDING - PADDLE_WIDTH / 2.0,
+                PADDING + PADDLE_WIDTH / 2.0,
                 self.left_y + PADDLE_HEIGHT / 2.0,
             ),
             0.0,
         ));
-        let paddle_box_right = paddle.aabb(&Isometry2::new(
+        let paddle_box_right: Aabb = paddle.aabb(&Isometry2::new(
             Vector2::new(
                 self.window_size[0] - PADDING - PADDLE_WIDTH / 2.0,
                 self.right_y + PADDLE_HEIGHT / 2.0,
@@ -164,9 +170,45 @@ impl App {
             0.0,
         ));
 
-        if paddle_box_left.intersects(&pong_box) || paddle_box_right.intersects(&pong_box) {
-            self.pong.vel = Matrix2::new(-1.0, 0.0, 0.0, 1.0) * self.pong.vel;
+        if paddle_box_left.intersects(&pong_box) {
+            let ray_int = paddle_box_left.cast_local_ray_and_get_normal(
+                &Ray::new(
+                    Point2::from(self.pong.pos),
+                    paddle_box_left.center() - Point2::from(self.pong.pos),
+                ),
+                100.0,
+                true,
+            );
+
+            if let Some(int) = ray_int {
+                println!("{:?}", int.normal);
+                if int.normal == Vector2::new(1.0, 0.0) {
+                    self.pong.vel = Matrix2::new(-1.0, 0.0, 0.0, 1.0) * self.pong.vel;
+                }
+            }
         }
+
+        if paddle_box_right.intersects(&pong_box) {
+            let ray_int = paddle_box_right.cast_local_ray_and_get_normal(
+                &Ray::new(
+                    Point2::from(self.pong.pos),
+                    paddle_box_right.center() - Point2::from(self.pong.pos),
+                ),
+                100.0,
+                true,
+            );
+
+            if let Some(int) = ray_int {
+                println!("{:?}", int.normal);
+                if int.normal == Vector2::new(-1.0, 0.0) {
+                    self.pong.vel = Matrix2::new(-1.0, 0.0, 0.0, 1.0) * self.pong.vel;
+                }
+            }
+        }
+
+        // if paddle_box_left.intersects(&pong_box) || paddle_box_right.intersects(&pong_box) {
+        //     self.pong.vel = Matrix2::new(-1.0, 0.0, 0.0, 1.0) * self.pong.vel;
+        // }
 
         if paddle_box_left.intersects(&pong_box) {
             match self.left_key {
@@ -194,15 +236,15 @@ impl App {
 
         if pong_box.intersects(&self.border_left.local_aabb()) {
             self.pong.pos = Vector2::new(self.window_size[0] / 2.0, self.window_size[1] / 2.0);
+            self.pong.vel = Vector2::new(150.0, 0.0);
             self.right_score += 1;
         }
 
         if pong_box.intersects(&self.border_right.local_aabb()) {
             self.pong.pos = Vector2::new(self.window_size[0] / 2.0, self.window_size[1] / 2.0);
+            self.pong.vel = Vector2::new(-PONG_SPEED, 0.0);
             self.left_score += 1;
         }
-
-        println!("{} {}", self.left_score, self.right_score);
     }
 }
 
