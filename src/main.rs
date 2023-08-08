@@ -48,36 +48,11 @@ pub struct App {
     right_key: Option<Key>,
     pong: Pong,
     window_size: [f64; 2],
-    border_left: Segment,
-    border_right: Segment,
-    border_top: Segment,
-    border_bottom: Segment,
 }
 
 impl App {
     fn render(&mut self, args: &RenderArgs, gc: &mut GlyphCache) {
         use graphics::*;
-
-        self.border_top =
-            Segment::new(Point2::new(0.0, 0.0), Point2::new(self.window_size[0], 0.0));
-
-        self.border_bottom = Segment::new(
-            Point2::new(0.0, self.window_size[1] as f64),
-            Point2::new(self.window_size[0], self.window_size[1]),
-        );
-
-        self.border_left = Segment::new(
-            Point2::new(PADDING + PADDLE_WIDTH / 2.0, 0.0),
-            Point2::new(PADDING + PADDLE_WIDTH / 2.0, self.window_size[1]),
-        );
-
-        self.border_right = Segment::new(
-            Point2::new(self.window_size[0] - PADDING - PADDLE_WIDTH / 2.0, 0.0),
-            Point2::new(
-                self.window_size[0] - PADDING - PADDLE_WIDTH / 2.0,
-                self.window_size[1],
-            ),
-        );
 
         self.window_size = args.window_size;
 
@@ -148,102 +123,9 @@ impl App {
 
         self.pong.update(args.dt);
 
-        // let pong_ball: Ball = Ball::new(PONG_RADIUS);
-
-        // let paddle: Cuboid = Cuboid::new(Vector::new(PADDLE_WIDTH / 2.0, PADDLE_HEIGHT / 2.0));
-
-        // let pong_box: Aabb = pong_ball.aabb(&Isometry2::new(self.pong.pos, 0.0));
-
-        // let paddle_box_left: Aabb = paddle.aabb(&Isometry2::new(
-        //     Vector2::new(
-        //         PADDING + PADDLE_WIDTH / 2.0,
-        //         self.left_y + PADDLE_HEIGHT / 2.0,
-        //     ),
-        //     0.0,
-        // ));
-        // let paddle_box_right: Aabb = paddle.aabb(&Isometry2::new(
-        //     Vector2::new(
-        //         self.window_size[0] - PADDING - PADDLE_WIDTH / 2.0,
-        //         self.right_y + PADDLE_HEIGHT / 2.0,
-        //     ),
-        //     0.0,
-        // ));
-
-        // if paddle_box_left.intersects(&pong_box) {
-        //     let ray_int = paddle_box_left.cast_local_ray_and_get_normal(
-        //         &Ray::new(
-        //             Point2::from(self.pong.pos),
-        //             paddle_box_left.center() - Point2::from(self.pong.pos),
-        //         ),
-        //         100.0,
-        //         true,
-        //     );
-
-        //     if let Some(int) = ray_int {
-        //         println!("{:?}", int.normal);
-        //         if int.normal == Vector2::new(1.0, 0.0) {
-        //             self.pong.vel = Matrix2::new(-1.0, 0.0, 0.0, 1.0) * self.pong.vel;
-        //         }
-        //     }
-        // }
-
-        // if paddle_box_right.intersects(&pong_box) {
-        //     let ray_int = paddle_box_right.cast_local_ray_and_get_normal(
-        //         &Ray::new(
-        //             Point2::from(self.pong.pos),
-        //             paddle_box_right.center() - Point2::from(self.pong.pos),
-        //         ),
-        //         100.0,
-        //         true,
-        //     );
-
-        //     if let Some(int) = ray_int {
-        //         println!("{:?}", int.normal);
-        //         if int.normal == Vector2::new(-1.0, 0.0) {
-        //             self.pong.vel = Matrix2::new(-1.0, 0.0, 0.0, 1.0) * self.pong.vel;
-        //         }
-        //     }
-        // }
-
-        // // if paddle_box_left.intersects(&pong_box) || paddle_box_right.intersects(&pong_box) {
-        // //     self.pong.vel = Matrix2::new(-1.0, 0.0, 0.0, 1.0) * self.pong.vel;
-        // // }
-
-        // if paddle_box_left.intersects(&pong_box) {
-        //     match self.left_key {
-        //         Some(Key::W) => self.pong.vel = Vector2::new(self.pong.vel.x, -PONG_SPEED),
-        //         Some(Key::S) => self.pong.vel = Vector2::new(self.pong.vel.x, PONG_SPEED),
-        //         Some(_) => {}
-        //         None => {}
-        //     }
-        // }
-
-        // if paddle_box_right.intersects(&pong_box) {
-        //     match self.right_key {
-        //         Some(Key::Up) => self.pong.vel = Vector2::new(self.pong.vel.x, -PONG_SPEED),
-        //         Some(Key::Down) => self.pong.vel = Vector2::new(self.pong.vel.x, PONG_SPEED),
-        //         Some(_) => {}
-        //         None => {}
-        //     }
-        // }
-
-        // if pong_box.intersects(&self.border_bottom.local_aabb())
-        //     || pong_box.intersects(&self.border_top.local_aabb())
-        // {
-        //     self.pong.vel = Matrix2::new(1.0, 0.0, 0.0, -1.0) * self.pong.vel;
-        // }
-
-        // if pong_box.intersects(&self.border_left.local_aabb()) {
-        //     self.pong.pos = Vector2::new(self.window_size[0] / 2.0, self.window_size[1] / 2.0);
-        //     self.pong.vel = Vector2::new(150.0, 0.0);
-        //     self.right_score += 1;
-        // }
-
-        // if pong_box.intersects(&self.border_right.local_aabb()) {
-        //     self.pong.pos = Vector2::new(self.window_size[0] / 2.0, self.window_size[1] / 2.0);
-        //     self.pong.vel = Vector2::new(-PONG_SPEED, 0.0);
-        //     self.left_score += 1;
-        // }
+        if self.pong.pos.y <= 0.0 || self.pong.pos.y >= self.window_size[1] {
+            self.pong.vel = Matrix2::new(1.0, 0.0, 0.0, -1.0) * self.pong.vel;
+        }
 
         if self.pong.pos.x <= PADDING + PADDLE_WIDTH {
             if self.pong.pos.y >= self.left_y && self.pong.pos.y <= self.left_y + PADDLE_HEIGHT {
@@ -314,28 +196,6 @@ fn main() {
             window.window.inner_size().width as f64,
             window.window.inner_size().height as f64,
         ],
-        border_top: Segment::new(
-            Point2::new(0.0, 0.0),
-            Point2::new(window.window.inner_size().width as f64, 0.0),
-        ),
-        border_bottom: Segment::new(
-            Point2::new(0.0, window.window.inner_size().height as f64),
-            Point2::new(
-                window.window.inner_size().width as f64,
-                window.window.inner_size().height as f64,
-            ),
-        ),
-        border_left: Segment::new(
-            Point2::new(0.0, 0.0),
-            Point2::new(0.0, window.window.inner_size().height as f64),
-        ),
-        border_right: Segment::new(
-            Point2::new(window.window.inner_size().width as f64, 0.0),
-            Point2::new(
-                window.window.inner_size().width as f64,
-                window.window.inner_size().height as f64,
-            ),
-        ),
     };
 
     let mut events = Events::new(EventSettings::new());
